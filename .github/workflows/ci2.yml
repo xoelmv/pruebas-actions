@@ -10,8 +10,8 @@ permissions:
   actions: write
 
 env:
-  CADA_MIN: 30
-  DURACION_MIN: 330
+  CADA_MIN: 60
+  DURACION_MIN: 300
 
 jobs:
   check:

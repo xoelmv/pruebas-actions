@@ -28,8 +28,8 @@ HEADERS = {
 }
 ZONA = {"latitude_ne": 44.0, "longitude_ne": 4.6, "latitude_sw": 27.5, "longitude_sw": -18.5}
 N = 20
-HILOS = 3
-PAUSA_S = (0.2, 0.6)
+HILOS = 2
+PAUSA_S = (0.5, 1.5)
 REINTENTOS = 5
 CODIGOS = {"AVAILABLE": 0, "CHARGING": 1, "OUTOFORDER": 2, "INOPERATIVE": 3, "BLOCKED": 4, "RESERVED": 5,
            "UNKNOWN": 6, "PLANNED": 7, "REMOVED": 8}
@@ -124,7 +124,7 @@ def main():
     ap.add_argument("--dir", default="d")
     ap.add_argument("--prev", default="prev.json")
     ap.add_argument("--max", type=int, default=0)
-    ap.add_argument("--min", type=float, default=25)
+    ap.add_argument("--min", type=float, default=50)
     args = ap.parse_args()
     t0 = time.time()
     instante, vistos, total, fallos = foto(args.max, args.min)
