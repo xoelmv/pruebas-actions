@@ -160,17 +160,21 @@ def main():
     completa = fallos == 0 and not args.max and (not prev or diaria)
     if completa:
         prev = {}
-    cambios = sorted((i, s, u) for i, (s, u) in actual.items() if prev.get(i) != (s, u))
+    cambios = [(i, s, u) for i, (s, u) in actual.items() if prev.get(i) != (s, u)]
+    idos = [] if fallos or args.max else [i for i in prev if i not in actual]
+    cambios = sorted(cambios + [(i, -1, "") for i in idos])
     ruta = os.path.join(dir_x, nombre + ("_f" if completa else "_p" if fallos else "") + ".csv.gz")
     with gzip.open(ruta, "wt", newline="") as f:
         w = csv.writer(f)
         w.writerow(["i", "s", "u"])
         w.writerows(cambios)
     prev.update(actual)
+    for i in idos:
+        del prev[i]
     os.makedirs(os.path.dirname(os.path.abspath(args.prev)), exist_ok=True)
     with gzip.open(args.prev, "wt") as f:
         json.dump({str(k): v for k, v in prev.items()}, f)
-    print(f"{instante}  {len(actual)} {len(cambios)} {len(nuevos)} ({time.time() - t0:.0f} s, {total}, {fallos}) {dict(motivos)}",
+    print(f"{instante}  {len(actual)} {len(cambios)} {len(nuevos)} {len(idos)} ({time.time() - t0:.0f} s, {total}, {fallos}) {dict(motivos)}",
           flush=True)
 
 
