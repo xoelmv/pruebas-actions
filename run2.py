@@ -161,7 +161,7 @@ def main():
     if completa:
         prev = {}
     cambios = sorted((i, s, u) for i, (s, u) in actual.items() if prev.get(i) != (s, u))
-    ruta = os.path.join(dir_x, nombre + ("_f" if completa else "") + ".csv.gz")
+    ruta = os.path.join(dir_x, nombre + ("_f" if completa else "_p" if fallos else "") + ".csv.gz")
     with gzip.open(ruta, "wt", newline="") as f:
         w = csv.writer(f)
         w.writerow(["i", "s", "u"])
