@@ -1,0 +1,56 @@
+name: report
+
+on:
+  schedule:
+    - cron: "23 7-11 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - id: f
+        run: echo "f=$(TZ=Europe/Madrid date +%F)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache/restore@v4
+        id: c
+        with:
+          path: r
+          key: r-${{ steps.f.outputs.f }}
+          lookup-only: true
+
+      - uses: actions/checkout@v4
+        if: steps.c.outputs.cache-hit != 'true' || inputs.force
+
+      - name: Run
+        id: run
+        if: steps.c.outputs.cache-hit != 'true' || inputs.force
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          NOMBRES: ${{ secrets.NOMBRES }}
+        run: python3 report.py ${{ inputs.force && '--force' || '' }}
+
+      - if: steps.run.outputs.ok == '1' && !inputs.force
+        run: mkdir -p r && date > r/x
+
+      - uses: actions/cache/save@v4
+        if: steps.run.outputs.ok == '1' && !inputs.force
+        with:
+          path: r
+          key: r-${{ steps.f.outputs.f }}

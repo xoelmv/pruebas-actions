@@ -43,6 +43,8 @@ jobs:
             gh workflow run ci2.yml -R "$GITHUB_REPOSITORY" --ref main && break
             sleep 30
           done
+          h=$(TZ=Europe/Madrid date +%-H)
+          if [ "$h" -ge 8 ] && [ "$h" -lt 13 ]; then gh workflow run report.yml -R "$GITHUB_REPOSITORY" --ref main || true; fi
 
       - uses: actions/checkout@v4
 
