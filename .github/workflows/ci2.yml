@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   actions: write
+  statuses: write
 
 env:
   CADA_MIN: 30
@@ -71,9 +72,14 @@ jobs:
         id: run
         env:
           API_URL2: ${{ secrets.API_URL2 }}
+          GH_TOKEN: ${{ github.token }}
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          NOMBRES: ${{ secrets.NOMBRES }}
         run: |
           git -C d config user.name "github-actions[bot]"
           git -C d config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          (timeout 120 python report.py --vigilar datos > /dev/null 2>&1 &)
           p=$(( CADA_MIN * 60 ))
           siguiente=$(( ( $(date +%s) / p + 1 ) * p ))
           sleep $(( siguiente - $(date +%s) ))

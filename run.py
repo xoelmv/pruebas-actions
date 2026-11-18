@@ -1,6 +1,7 @@
 import argparse
 import csv
 import gzip
+import json
 import os
 import random
 import sys
@@ -69,6 +70,7 @@ def foto():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", default="estado")
+    ap.add_argument("--meta", default="")
     args = ap.parse_args()
     t0 = time.time()
     instante, filas, fallos = foto()
@@ -81,6 +83,11 @@ def main():
         w = csv.writer(f)
         w.writerow(["instante_utc", "site_id", "potencia", "estado"])
         w.writerows(filas)
+    if args.meta:
+        os.makedirs(args.meta, exist_ok=True)
+        with open(os.path.join(args.meta, instante.replace(":", "") + ".json"), "w") as f:
+            json.dump({"n": len(filas), "fallos": fallos, "celdas": sum(1 for _ in cuadriculas()),
+                       "seg": round(time.time() - t0)}, f)
     print(f"{instante}  {len(filas)} ({time.time() - t0:.0f} s, {fallos})", flush=True)
 
 

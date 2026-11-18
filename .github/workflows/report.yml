@@ -8,10 +8,14 @@ on:
       force:
         type: boolean
         default: false
+      test:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
   actions: read
+  statuses: write
 
 concurrency:
   group: report
@@ -44,7 +48,7 @@ jobs:
           MAIL_PASS: ${{ secrets.MAIL_PASS }}
           MAIL_TO: ${{ secrets.MAIL_TO }}
           NOMBRES: ${{ secrets.NOMBRES }}
-        run: python3 report.py ${{ inputs.force && '--force' || '' }}
+        run: python3 report.py ${{ inputs.force && '--force' || '' }} ${{ inputs.test && '--vigilar datos2 --prueba' || '' }}
 
       - if: steps.run.outputs.ok == '1' && !inputs.force
         run: mkdir -p r && date > r/x

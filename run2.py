@@ -174,6 +174,12 @@ def main():
     os.makedirs(os.path.dirname(os.path.abspath(args.prev)), exist_ok=True)
     with gzip.open(args.prev, "wt") as f:
         json.dump({str(k): v for k, v in prev.items()}, f)
+    firma = None if fallos else hashlib.sha1("".join(f"{i},{s},{u}\n" for i, (s, u) in sorted(actual.items())).encode()).hexdigest()
+    dir_m = os.path.join(args.dir, "m")
+    os.makedirs(dir_m, exist_ok=True)
+    with open(os.path.join(dir_m, nombre + ".json"), "w") as f:
+        json.dump({"n": len(actual), "f": firma, "pag": total, "fallos": fallos, "seg": round(time.time() - t0),
+                   "mot": dict(motivos), "bajas": len(idos)}, f)
     print(f"{instante}  {len(actual)} {len(cambios)} {len(nuevos)} {len(idos)} ({time.time() - t0:.0f} s, {total}, {fallos}) {dict(motivos)}",
           flush=True)
 

@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   actions: write
+  statuses: write
 
 env:
   CADA_MIN: 30
@@ -65,6 +66,10 @@ jobs:
       - name: Run
         env:
           API_URL: ${{ secrets.API_URL }}
+          GH_TOKEN: ${{ github.token }}
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          NOMBRES: ${{ secrets.NOMBRES }}
         run: |
           git -C datos config user.name "github-actions[bot]"
           git -C datos config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -73,9 +78,10 @@ jobs:
           while :; do
             siguiente=$(( ( $(date +%s) / p + 1 ) * p ))
             [ "$siguiente" -gt "$limite" ] && break
+            (timeout 120 python report.py --vigilar datos2 > /dev/null 2>&1 &)
             sleep $(( siguiente - $(date +%s) ))
-            if python run.py --dir datos/estado; then
-              git -C datos add --sparse estado
+            if python run.py --dir datos/estado --meta datos/m; then
+              git -C datos add --sparse estado m
               git -C datos commit -q -m "update"
               for intento in 1 2 3; do
                 git -C datos push -q && break
