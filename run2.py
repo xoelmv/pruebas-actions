@@ -28,8 +28,8 @@ HEADERS = {
 }
 ZONA = {"latitude_ne": 44.0, "longitude_ne": 4.6, "latitude_sw": 27.5, "longitude_sw": -18.5}
 N = 20
-HILOS = 2
-PAUSA_S = (0.5, 1.5)
+HILOS = 3
+PAUSA_S = (0.2, 0.6)
 REINTENTOS = 5
 CODIGOS = {"AVAILABLE": 0, "CHARGING": 1, "OUTOFORDER": 2, "INOPERATIVE": 3, "BLOCKED": 4, "RESERVED": 5,
            "UNKNOWN": 6, "PLANNED": 7, "REMOVED": 8}
@@ -122,9 +122,9 @@ def leer_ids(carpeta):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", default="d")
-    ap.add_argument("--prev", default="prev.json")
+    ap.add_argument("--prev", default="p/prev.json.gz")
     ap.add_argument("--max", type=int, default=0)
-    ap.add_argument("--min", type=float, default=50)
+    ap.add_argument("--min", type=float, default=25)
     args = ap.parse_args()
     t0 = time.time()
     instante, vistos, total, fallos = foto(args.max, args.min)
@@ -150,9 +150,16 @@ def main():
 
     prev = {}
     if os.path.exists(args.prev):
-        prev = {int(k): tuple(v) for k, v in json.load(open(args.prev)).items()}
+        try:
+            with gzip.open(args.prev, "rt") as f:
+                prev = {int(k): tuple(v) for k, v in json.load(f).items()}
+        except Exception:
+            prev = {}
     actual = {ids[c]: (s, u) for c, (s, u, kw) in vistos.items()}
-    completa = not prev and fallos == 0 and not args.max
+    diaria = instante[11:13] == "00" and instante[14:16] < "30"
+    completa = fallos == 0 and not args.max and (not prev or diaria)
+    if completa:
+        prev = {}
     cambios = sorted((i, s, u) for i, (s, u) in actual.items() if prev.get(i) != (s, u))
     ruta = os.path.join(dir_x, nombre + ("_f" if completa else "") + ".csv.gz")
     with gzip.open(ruta, "wt", newline="") as f:
@@ -160,7 +167,9 @@ def main():
         w.writerow(["i", "s", "u"])
         w.writerows(cambios)
     prev.update(actual)
-    json.dump({str(k): v for k, v in prev.items()}, open(args.prev, "w"))
+    os.makedirs(os.path.dirname(os.path.abspath(args.prev)), exist_ok=True)
+    with gzip.open(args.prev, "wt") as f:
+        json.dump({str(k): v for k, v in prev.items()}, f)
     print(f"{instante}  {len(actual)} {len(cambios)} {len(nuevos)} ({time.time() - t0:.0f} s, {total}, {fallos}) {dict(motivos)}",
           flush=True)
 

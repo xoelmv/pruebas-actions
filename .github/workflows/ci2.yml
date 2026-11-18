@@ -10,8 +10,7 @@ permissions:
   actions: write
 
 env:
-  CADA_MIN: 60
-  DURACION_MIN: 300
+  CADA_MIN: 30
 
 jobs:
   check:
@@ -30,7 +29,7 @@ jobs:
   build:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 355
+    timeout-minutes: 75
     concurrency:
       group: build2
       cancel-in-progress: false
@@ -60,24 +59,33 @@ jobs:
           filter: blob:none
           sparse-checkout: i
 
+      - uses: actions/cache/restore@v4
+        with:
+          path: p
+          key: p-${{ github.run_id }}
+          restore-keys: p-
+
       - name: Run
+        id: run
         env:
           API_URL2: ${{ secrets.API_URL2 }}
         run: |
           git -C d config user.name "github-actions[bot]"
           git -C d config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           p=$(( CADA_MIN * 60 ))
-          limite=$(( $(date +%s) + DURACION_MIN * 60 ))
-          while :; do
-            siguiente=$(( ( $(date +%s) / p + 1 ) * p ))
-            [ "$siguiente" -gt "$limite" ] && break
-            sleep $(( siguiente - $(date +%s) ))
-            if python run2.py --dir d --prev "$RUNNER_TEMP/prev.json"; then
-              git -C d add --sparse -A .
-              git -C d commit -q -m "update"
-              for intento in 1 2 3; do
-                git -C d push -q && break
-                git -C d pull --rebase -q || true
-              done
-            fi
-          done
+          siguiente=$(( ( $(date +%s) / p + 1 ) * p ))
+          sleep $(( siguiente - $(date +%s) ))
+          if python run2.py --dir d --prev p/prev.json.gz; then
+            git -C d add --sparse -A .
+            git -C d commit -q -m "update"
+            for intento in 1 2 3; do
+              if git -C d push -q; then echo "ok=1" >> "$GITHUB_OUTPUT"; break; fi
+              git -C d pull --rebase -q || true
+            done
+          fi
+
+      - uses: actions/cache/save@v4
+        if: steps.run.outputs.ok == '1'
+        with:
+          path: p
+          key: p-${{ github.run_id }}
