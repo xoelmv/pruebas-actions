@@ -38,6 +38,7 @@ local = threading.local()
 cerrojo = threading.Lock()
 motivos = collections.Counter()
 limite = [0.0]
+MAX_429 = 5
 
 
 def anotar(motivo):
@@ -51,6 +52,9 @@ def get(n):
     for intento in range(REINTENTOS):
         if time.time() > limite[0]:
             anotar("t")
+            return None
+        if motivos["429"] >= MAX_429:
+            anotar("p")
             return None
         try:
             r = local.s.post(URL, params={"page": n, "per_page": N}, json=ZONA, headers=HEADERS, timeout=(10, 40))
