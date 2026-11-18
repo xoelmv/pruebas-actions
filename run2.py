@@ -1,4 +1,5 @@
 import argparse
+import collections
 import csv
 import glob
 import gzip
@@ -34,20 +35,37 @@ CODIGOS = {"AVAILABLE": 0, "CHARGING": 1, "OUTOFORDER": 2, "INOPERATIVE": 3, "BL
            "UNKNOWN": 6, "PLANNED": 7, "REMOVED": 8}
 
 local = threading.local()
+cerrojo = threading.Lock()
+motivos = collections.Counter()
+limite = [0.0]
+
+
+def anotar(motivo):
+    with cerrojo:
+        motivos[motivo] += 1
 
 
 def get(n):
     if not hasattr(local, "s"):
         local.s = requests.Session()
     for intento in range(REINTENTOS):
+        if time.time() > limite[0]:
+            anotar("t")
+            return None
         try:
-            r = local.s.post(URL, params={"page": n, "per_page": N}, json=ZONA, headers=HEADERS, timeout=60)
+            r = local.s.post(URL, params={"page": n, "per_page": N}, json=ZONA, headers=HEADERS, timeout=(10, 40))
             if r.status_code == 200:
-                time.sleep(random.uniform(*PAUSA_S))
-                return r.json()
-        except Exception:
-            pass
-        time.sleep(2 ** intento + random.random())
+                try:
+                    d = r.json()
+                    time.sleep(random.uniform(*PAUSA_S))
+                    return d
+                except ValueError:
+                    anotar("html")
+            else:
+                anotar(str(r.status_code))
+        except Exception as e:
+            anotar(type(e).__name__[:16])
+        time.sleep(max(0.0, min(2 ** intento + random.random(), limite[0] - time.time())))
     return None
 
 
@@ -67,8 +85,9 @@ def filas(datos):
                    CODIGOS.get(e.get("status"), 9), epoch(e.get("status_updated_at") or ""), round(kw))
 
 
-def foto(max_paginas):
+def foto(max_paginas, minutos):
     instante = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    limite[0] = time.time() + minutos * 60
     primera = get(1)
     if primera is None:
         return instante, {}, None, 0
@@ -101,11 +120,12 @@ def main():
     ap.add_argument("--dir", default="d")
     ap.add_argument("--prev", default="prev.json")
     ap.add_argument("--max", type=int, default=0)
+    ap.add_argument("--min", type=float, default=25)
     args = ap.parse_args()
     t0 = time.time()
-    instante, vistos, total, fallos = foto(args.max)
+    instante, vistos, total, fallos = foto(args.max, args.min)
     if not vistos:
-        print(f"{instante}  0 ({fallos})", flush=True)
+        print(f"{instante}  0 ({time.time() - t0:.0f} s, {fallos}) {dict(motivos)}", flush=True)
         sys.exit(1)
 
     dir_i, dir_x = os.path.join(args.dir, "i"), os.path.join(args.dir, "x")
@@ -137,7 +157,7 @@ def main():
         w.writerows(cambios)
     prev.update(actual)
     json.dump({str(k): v for k, v in prev.items()}, open(args.prev, "w"))
-    print(f"{instante}  {len(actual)} {len(cambios)} {len(nuevos)} ({time.time() - t0:.0f} s, {total}, {fallos})",
+    print(f"{instante}  {len(actual)} {len(cambios)} {len(nuevos)} ({time.time() - t0:.0f} s, {total}, {fallos}) {dict(motivos)}",
           flush=True)
 
 
