@@ -304,7 +304,7 @@ def bot2(ahora, problemas):
         f" · bajas {num(sum(x['bajas'] for x in v.values()))}",
         f"  Cambios por foto: mediana {num(median([x['filas'] for x in v.values() if x['m'] != '_f'] or [0]))}",
         linea_ctl,
-        f"  Comprobación contra la API: {len([d for d in ctl.values() if d.get('f')])} fotos comprobadas, "
+        f"  Comprobación contra la API: {n_(len([d for d in ctl.values() if d.get('f')]), 'foto comprobada', 'fotos comprobadas')}, "
         f"{len(desajustes)} no coinciden · errores de red: {dict(errores) or 'ninguno'}",
         f"  Última foto: {reparto}",
         f"  Última foto completa: {hora(ult_f, True)}",
